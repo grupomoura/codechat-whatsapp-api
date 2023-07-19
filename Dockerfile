@@ -1,41 +1,20 @@
 ### BASE IMAGE
-FROM node:18.16-bullseye-slim AS base
-
-RUN apt update -y
-RUN apt upgrade -y
-RUN apt install -y git
-RUN npm install -g npm
-
-### BUILD IMAGE
-FROM base AS builder
-
-WORKDIR /codechat
-
-COPY ./package.json .
-
-RUN npm install
-
-COPY ./tsconfig.json .
-COPY ./src ./src
-
-RUN npm run build
-
-### RELEASE IMAGE
-FROM base AS release
-
-WORKDIR /codechat
-COPY --from=builder /codechat/package*.json .
-RUN npm ci --omit=dev
+FROM node:18
 
 LABEL version="1.2.3" description="Api to control whatsapp features through http requests." 
 LABEL maintainer="Cleber Wilson" git="https://github.com/jrCleber"
 LABEL contact="contato@codechat.dev" whatsapp="https://chat.whatsapp.com/HyO8X8K0bAo0bfaeW8bhY5" telegram="https://t.me/codechatBR"
 
-COPY --from=builder /codechat/dist .
+RUN apt-get update -y
+RUN apt-get upgrade -y
 
-COPY ./tsconfig.json .
-COPY ./src ./src
-RUN mkdir instances
+WORKDIR /codechat
+
+COPY ./package.json .
+
+# See https://github.com/code-chat-br/whatsapp-api/blob/main/Docker/dev.env
+# This file composes an image from the data in this repository.
+# Check here the official image of this api: https://hub.docker.com/r/codechat/api
 
 ENV DOCKER_ENV=true
 
@@ -89,9 +68,22 @@ ENV WEBHOOK_EVENTS_GROUPS_UPSERT=false
 ENV WEBHOOK_EVENTS_GROUPS_UPDATE=false
 ENV WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE=false
 
-EXPOSE 8084
+ENV WEBHOOK_EVENTS_NEW_JWT_TOKEN=true
 
-# All settings must be in the env.yml file, passed as a volume to the container
+ENV CONFIG_SESSION_PHONE_CLIENT='polyservices'
+ENV CONFIG_SESSION_PHONE_NAME='Chrome'
 
-CMD [ "node", "./src/main.js" ]
+ENV QRCODE_LIMIT=6
 
+ENV AUTHENTICATION_TYPE='jwt' 
+
+ENV AUTHENTICATION_API_KEY='t8OOEeISKzpmc3jjcMqBWYSaJsafdefer'
+
+ENV AUTHENTICATION_JWT_EXPIRIN_IN=0
+ENV AUTHENTICATION_JWT_SECRET='L0YWtjb2w554WFqPG'
+
+RUN npm install
+
+COPY . .
+
+CMD [ "node", "./dist/src/main.js" ]
